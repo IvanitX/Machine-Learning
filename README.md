@@ -1,2 +1,196 @@
-# Machine-Learning
-ACTIVIDADA
+using System;
+using System.Collections.Generic;
+
+class AStar
+{
+    class Node
+    {
+        public int x, y;
+        public Node parent;
+        public double g;
+        public double h;
+
+        public Node(int x, int y, Node parent = null)
+        {
+            this.x = x;
+            this.y = y;
+            this.parent = parent;
+            g = h = 0;
+        }
+
+        public double f
+        {
+            get { return g + h; }
+        }
+    }
+
+    static double EuclideanDistance(int x1, int y1, int x2, int y2)
+    {
+        return Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+    }
+
+    static List<Node> FindPath(int[,] grid, int startX, int startY, int endX, int endY)
+    {
+        int width = grid.GetLength(0);
+        int height = grid.GetLength(1);
+
+        Node startNode = new Node(startX, startY);
+        Node endNode = new Node(endX, endY);
+
+        List<Node> openList = new List<Node>();
+        List<Node> closedList = new List<Node>();
+
+        openList.Add(startNode);
+
+        while (openList.Count > 0)
+        {
+            Node currentNode = openList[0];
+            for (int i = 1; i < openList.Count; i++)
+            {
+                if (openList[i].f < currentNode.f)
+                {
+                    currentNode = openList[i];
+                }
+            }
+
+            openList.Remove(currentNode);
+            closedList.Add(currentNode);
+
+            if (currentNode.x == endNode.x && currentNode.y == endNode.y)
+            {
+                List<Node> path = new List<Node>();
+                Node current = currentNode;
+                while (current != null)
+                {
+                    path.Add(current);
+                    current = current.parent;
+                }
+                path.Reverse();
+                return path;
+            }
+
+            List<Node> successors = new List<Node>();
+            for (int i = -1; i <= 1; i++)
+            {
+                for (int j = -1; j <= 1; j++)
+                {
+                    if ((i == 0 && j == 0) ||
+                        currentNode.x + i < 0 || currentNode.x + i >= width ||
+                        currentNode.y + j < 0 || currentNode.y + j >= height)
+                    {
+                        continue;
+                    }
+
+                    if (grid[currentNode.x + i, currentNode.y + j] == 1)
+                    {
+                        continue;
+                    }
+
+                    Node successor = new Node(currentNode.x + i, currentNode.y + j, currentNode);
+                    successors.Add(successor);
+                }
+            }
+
+            foreach (Node successor in successors)
+            {
+                if (closedList.Exists(node => node.x == successor.x && node.y == successor.y))
+                {
+                    continue;
+                }
+
+                double tentativeG = currentNode.g + EuclideanDistance(currentNode.x, currentNode.y, successor.x, successor.y);
+
+                Node existingNode = openList.Find(node => node.x == successor.x && node.y == successor.y);
+                if (existingNode != null && tentativeG < existingNode.g)
+                {
+                    existingNode.g = tentativeG;
+                    existingNode.parent = currentNode;
+                }
+                else if (existingNode == null)
+                {
+                    successor.g = tentativeG;
+                    successor.h = EuclideanDistance(successor.x, successor.y, endNode.x, endNode.y);
+                    openList.Add(successor);
+                }
+            }
+        }
+
+        return new List<Node>();
+    }
+
+    static void PrintGridWithRoute(int[,] grid, List<Node> path, int startX, int startY, int endX, int endY)
+    {
+        for (int x = 0; x < grid.GetLength(1); x++)
+        {
+            for (int y = 0; y < grid.GetLength(0); y++)
+            {
+                if (x == startX && y == startY)
+                {
+                    Console.Write("X ");
+                }
+                else if (x == endX && y == endY)
+                {
+                    Console.Write("Y ");
+                }
+                else if (path.Exists(node => node.x == x && node.y == y))
+                {
+                    Console.Write("# ");
+                }
+                else if (grid[x, y] == 1)
+                {
+                    Console.Write("1 ");
+                }
+                else
+                {
+                    Console.Write(". ");
+                }
+            }
+            Console.WriteLine();
+        }
+    }
+
+    static void Main(string[] args)
+    {
+        int[,] grid = {
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {'A', 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {1, 0, 0, 0, 1, 1, 0, 0, 0, 0},
+            {0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+            {0, 0, 0, 0, 1, 1, 0, 0, 'B', 0}
+        };
+
+        int startX = -1, startY = -1, endX = -1, endY = -1;
+
+        for (int y = 0; y < grid.GetLength(1); y++)
+        {
+            for (int x = 0; x < grid.GetLength(0); x++)
+            {
+                if (grid[x, y] == 'A')
+                {
+                    startX = x;
+                    startY = y;
+                }
+                else if (grid[x, y] == 'B')
+                {
+                    endX = x;
+                    endY = y;
+                }
+            }
+        }
+
+        if (startX != -1 && startY != -1 && endX != -1 && endY != -1)
+        {
+            List<Node> path = FindPath(grid, startX, startY, endX, endY);
+            PrintGridWithRoute(grid, path, startX, startY, endX, endY);
+        }
+        else
+        {
+            Console.WriteLine("Error: No se encontraron puntos de inicio y fin en la matriz.");
+        }
+    }
+}
